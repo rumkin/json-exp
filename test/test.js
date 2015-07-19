@@ -54,7 +54,29 @@ describe('Library', function () {
         it('result.d[2] should to be a number 2', function(){
             should(result.d[2]).have.type('number').and.equal(6);
         });
+
+        describe('Multiple instances', function () {
+            var one, two;
+            before(function () {
+                var json = {
+                    a: 1,
+                    b: 2,
+                    c: {$: 'a + b'}
+                };
+
+                one = jsonExp(json);
+                two = jsonExp(json);
+            });
+
+            it('Should have different scopes', function () {
+                one.a = 3;
+
+                should(one.c).have.type('number').and.equal(5);
+                should(two.c).have.type('number').and.equal(3);
+            });
+        });
     });
+
 
     describe('$require rule.', function(){
         var result;

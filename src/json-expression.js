@@ -48,7 +48,7 @@ function compile(target, options, path) {
         target.forEach(function (item, i) {
             if (isObject(item)) {
                 if (item.hasOwnProperty('$')) {
-                    bindExpression(result, i, item.$, options.scope);
+                    bindExpression(result, i, item.$, options);
                 } else {
                     if (isUndefined(item = matchHelpers(item, options, path.concat([i])))) {
                         item = result[i];
@@ -63,24 +63,26 @@ function compile(target, options, path) {
         result = expressions.compile(target.$)(options.scope);
     } else {
         result = matchHelpers(target, options, path);
-        if (isUndefined(result)) {
-            result = target;
+        if (! isUndefined(result)) {
+            target = result;
         }
+
+        result = {};
 
         if (options.scope === null) {
             options.scope = result;
         }
 
-        Object.keys(result).forEach(function(key) {
-            var value = result[key];
+        Object.getOwnPropertyNames(target).forEach(function(key) {
+            var value = target[key];
 
             if (isObject(value)) {
                 if (value.hasOwnProperty('$')) {
-                    bindExpression(result, key, value.$, options.scope);
+                    bindExpression(result, key, value.$, options);
                 } else {
                     value = matchHelpers(value, options, path.concat([key]));
                     if (isUndefined(value)) {
-                        value = result[key];
+                        value = target[key];
                     }
                     result[key] = compile(value, options, path.concat([key]));
                 }
@@ -101,11 +103,11 @@ function compile(target, options, path) {
     return result;
 }
 
-function bindExpression(target, key, expression, scope) {
+function bindExpression(target, key, expression, options) {
     Object.defineProperty(target, key, {
         configurable: true,
         get: function() {
-            return expressions.compile(expression)(scope);
+            return expressions.compile(expression)(options.scope);
         }
     });
 }
