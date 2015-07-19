@@ -33,11 +33,11 @@ Scopes:
 
 ```javascript
 var scope = {
-    user: 'World'
+    name: 'World'
 };
 
 var result = jsonExp({
-    hello: {$: '"Hello " + user'}
+    hello: {$: '"Hello " + name'}
 }, {
     scope: scope
 });

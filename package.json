@@ -1,6 +1,6 @@
 {
-  "name": "json-ex",
-  "version": "0.0.1",
+  "name": "json-exp",
+  "version": "0.0.2",
   "description": "JSON with expressions",
   "keywords": [
     "json",
@@ -11,7 +11,7 @@
     "test": "node_modules/.bin/mocha test/test.js",
     "coverage": "node_modules/.bin/mocha test/test.js -r blanket -R html-cov > tmp/coverage.html"
   },
-  "config":{
+  "config": {
     "blanket": {
       "pattern": "src",
       "data-cover-never": "node_modules"
@@ -20,7 +20,9 @@
   "devDependencies": {
     "should": "~7.0.2",
     "mocha": "~2.2.5",
-    "blanket": "~1.1.7"
+    "blanket": "~1.1.7",
+    "coveralls": "~2.11.3",
+    "mocha-lcov-reporter": "0.0.2"
   },
   "dependencies": {
     "angular-expressions": "~0.2.1"
