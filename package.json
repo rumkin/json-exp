@@ -1,0 +1,20 @@
+{
+  "name": "json-ex",
+  "version": "0.0.1",
+  "description": "JSON with expressions",
+  "keywords": [
+    "json",
+    "expression",
+    "configuration"
+  ],
+  "scripts": {
+    "test": "node_modules/.bin/mocha test/test.js"
+  },
+  "devDependencies": {
+    "should": "~7.0.2",
+    "mocha": "~2.2.5"
+  },
+  "dependencies": {
+    "angular-expressions": "~0.2.1"
+  }
+}
