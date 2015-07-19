@@ -3,27 +3,33 @@ var util = require('util');
 var format = util.format;
 var expressions = require('angular-expressions');
 
-module.exports = jsonEx;
-jsonEx.join = join;
-jsonEx.defaults = defaults;
+module.exports = jsonExp;
+jsonExp.copy = copy;
+jsonExp.defaults = defaults;
 
 /**
- * Target Object, Array or jsonExpression.
+ * Target Object, Array or Json Expression.
  * @param {object, *[], {$:string}} expression Value to evaluate.
- * @param {{}} options jsonExpressions options
+ * @param {{}} options JsonExpressions options
  * @returns {*}
  */
-function jsonEx(expression, options) {
+function jsonExp(expression, options) {
     options = defaults(options || {}, {
-        filename: null,
-        helpers: ['require', 'extend'],
+        id: '',
+        helpers: jsonExp.helpers,
         scope: null,
-        cache: {},
-        root: process.cwd(),
-        dir: '/'
+        cache: {}
     });
 
     if (! isObject(expression)) throw new Error('Argument #1 should be an Object.');
+
+    var helpers = options.helpers;
+
+    Object.getOwnPropertyNames(helpers).forEach(function(helper){
+        if (typeof helpers[helper].init === 'function') {
+            helpers[helper].init(expression, options);
+        }
+    });
 
     return compile(expression, options, []);
 }
@@ -36,21 +42,15 @@ function jsonEx(expression, options) {
  * @returns {object|*[]}
  */
 function compile(target, options, path) {
-
     var result;
     if (Array.isArray(target)) {
         result = [];
         target.forEach(function (item, i) {
             if (isObject(item)) {
                 if (item.hasOwnProperty('$')) {
-                    Object.defineProperty(result, i, {
-                        configurable: true,
-                        get: function () {
-                            return expressions.compile(item.$)(options.scope);
-                        }
-                    });
+                    bindExpression(result, i, item.$, options.scope);
                 } else {
-                    if (isUndefined(item = matchRules(item, jsonEx.helpers, options, path.concat([i])))) {
+                    if (isUndefined(item = matchHelpers(item, options, path.concat([i])))) {
                         item = result[i];
                     }
                     result[i] = compile(item, options, path.concat([i]));
@@ -62,7 +62,7 @@ function compile(target, options, path) {
     } else if (target.hasOwnProperty('$')) {
         result = expressions.compile(target.$)(options.scope);
     } else {
-        result = matchRules(target, jsonEx.helpers, options, path);
+        result = matchHelpers(target, options, path);
         if (isUndefined(result)) {
             result = target;
         }
@@ -76,14 +76,9 @@ function compile(target, options, path) {
 
             if (isObject(value)) {
                 if (value.hasOwnProperty('$')) {
-                    Object.defineProperty(result, key, {
-                        configurable: true,
-                        get: function() {
-                            return expressions.compile(value.$)(options.scope);
-                        }
-                    });
+                    bindExpression(result, key, value.$, options.scope);
                 } else {
-                    value = matchRules(value, jsonEx.helpers, options, path.concat([key]));
+                    value = matchHelpers(value, options, path.concat([key]));
                     if (isUndefined(value)) {
                         value = result[key];
                     }
@@ -95,74 +90,107 @@ function compile(target, options, path) {
         });
     }
 
+    Object.defineProperty(result, 'clone', {
+        enumerable: false,
+        configurable: true,
+        value: function(){
+            return copy({}, this);
+        }
+    });
+
     return result;
+}
+
+function bindExpression(target, key, expression, scope) {
+    Object.defineProperty(target, key, {
+        configurable: true,
+        get: function() {
+            return expressions.compile(expression)(scope);
+        }
+    });
 }
 
 /**
  * Helpers dictionary. <string, function(object, options, path)>.
  * @type {{}}
  */
-jsonEx.helpers = {
-    /**
-     * Require rule helper. Use `$require` object property to specify value.
-     * @param {object} target Target object to search rule match.
-     * @param {object} options Compilation options.
-     * @returns {undefined|object}
-     */
-    require: function(target, options) {
-        if (! target.hasOwnProperty('$require')) return void 0;
+jsonExp.helpers = {
+    require: {
+        init: function(target, options, path) {
 
-        var filename = path.resolve(options.dir, target.$require);
+        },
+        /**
+         * Require helper routine. Use `$require` object property to specify value.
+         * @param {object} target Target object to search rule match.
+         * @param {object} options Compilation options.
+         * @returns {undefined|object}
+         */
+        routine: function(target, options) {
+            if (! target.hasOwnProperty('$require')) return void 0;
 
-        if (options.cache.hasOwnProperty(filename)) return options.cache[filename];
+            var id = path.resolve(options.dir, target.$require);
 
-        var data = require(path.join(options.root, filename));
-        if (! isObject(data)) {
-            throw new Error(format('Value of file "%s" is not an Object', filename));
+            if (options.cache.hasOwnProperty(id)) return options.cache[id];
+
+            var data = require(path.join(options.root, id));
+            if (! isObject(data)) {
+                throw new Error(format('Value of file "%s" is not an Object', id));
+            }
+            var newOptions = util._extend({}, options);
+            newOptions.id = id;
+            newOptions.dir = path.dirname(id);
+
+            return options.cache[id] = jsonExp(data, newOptions);
         }
-        var newOptions = util._extend({}, options);
-        newOptions.filename = filename;
-        newOptions.dir = path.dirname(filename);
-
-        return options.cache[filename] = jsonEx(data, newOptions);
     },
-    /**
-     * Extend rule helper. Use `$extend` object property to specify extension target.
-     * @param {object} object Target object.
-     * @param {object} options JsonEx options.
-     * @param {string} path
-     * @returns {undefined|Object}
-     */
-    extend: function(object, options, path) {
-        if (! object.hasOwnProperty('$extend')) return void 0;
+    extend: {
+        init: function(target, options) {
+            defaults(options, {
+                root: process.cwd(),
+                dir: '/'
+            });
+        },
+        /**
+         * Extend helper routine. Use `$extend` object property to specify extension target.
+         * @param {object} object Target object.
+         * @param {object} options JsonExp options.
+         * @param {string} path
+         * @returns {undefined|Object}
+         */
+        routine: function(object, options, path) {
+            if (! object.hasOwnProperty('$extend')) return void 0;
 
-        var target = compile(object.$extend, options, path.concat(['$extend']));
-        var source = compile(object.$with, options, path.concat(['$with']));
+            var target = compile(object.$extend, options, path.concat(['$extend']));
+            var source = compile(object.$with, options, path.concat(['$with']));
 
-        return join(target, source);
+            return copy(target, source, {append: ['$root']});
+        }
     }
 };
 
 /**
  * Check if object is a JsonExpression rule.
- * @param {object} document Target value.
- * @param {string[]} helpers Helper names array. Defines helpers order
- * @param {object} options JsonEx options.
+ * @param {object} target Target value.
+ * @param {object} options JsonExp options.
  * @param {string[]} path Current target path.
  * @returns {undefined|object}
  */
-function matchRules(document, helpers, options, path) {
+function matchHelpers(target, options, path) {
+    helpers = options.helpers;
+    var list = Object.getOwnPropertyNames(helpers);
+
     var i = -1;
-    var l = options.helpers.length;
-    var helper, result;
+    var l = list.length;
+    var name, helper, result;
 
     while (++i < l) {
-        helper = options.helpers[i];
-        if (typeof helpers[helper] !== 'function') {
-            throw new Error('Rule "' + helper + '" not found');
+        name = list[i];
+        helper = helpers[name];
+        if (! isObject(helper) || typeof helper.routine !== 'function') {
+            throw new Error(format('Helper "%s" routine is not a function', name));
         }
 
-        result = helpers[helper](document, options, path);
+        result = helper.routine(target, options, path);
         if (! isUndefined(result)) return result;
     }
 
@@ -172,10 +200,19 @@ function matchRules(document, helpers, options, path) {
 /**
  * Check if value is an object.
  * @param {*} target
- * @returns {*|boolean}
+ * @returns {boolean}
  */
 function isObject(target) {
-    return target && typeof target === 'object';
+    return !!target && typeof target === 'object';
+}
+
+/**
+ * Check if object is a native object.
+ * @param {*} target Value to check.
+ * @returns {boolean}
+ */
+function isNativeObject(target) {
+    return isObject(target) && target.constructor === Object;
 }
 
 /**
@@ -205,25 +242,35 @@ function defaults(target, source) {
 }
 
 /**
- * Copy properties from source to target using `Object.defineProperty` and `Object.getOwnPropertyDescriptor`
+ * Copy properties from source to target using `Object.defineProperty` and `Object.getOwnPropertyDescriptor`. Options
+ * could have keys to prevent cloning properties by regex mask or to force clone non-native objects.
+ *
  * @param {object} target Target object
  * @param {object} source Source object
+ * @params {object} options Copy options has `exclude` and `include` options
  * @returns {object}
  */
-function join(target, source) {
+function copy(target, source, options) {
+    options = options || {};
     if (Array.isArray(source)) {
         target = source.map(function(item){
             if (! isObject(item)) return item;
-            return join({}, item);
+            return copy({}, item, options);
         });
     } else {
         Object.getOwnPropertyNames(source).forEach(function(name){
             var descriptor = Object.getOwnPropertyDescriptor(source, name);
-            descriptor.jsonExurable = true;
+            descriptor.configurable = true;
             descriptor.writeable = true;
 
+            if (options.exclude && options.exclude.test(name)) return;
+
             if (isObject(descriptor.value)) {
-                descriptor.value = join({}, descriptor.value);
+                if (descriptor.value === source) {
+                    descriptor.value = target;
+                } else if (options.force || isNativeObject(descriptor.value) || Array.isArray(descriptor.value)) {
+                    descriptor.value = copy({}, descriptor.value, options);
+                }
             }
 
             Object.defineProperty(target, name, descriptor);

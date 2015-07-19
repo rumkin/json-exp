@@ -1,18 +1,18 @@
 var should = require('should');
-var jsonx = require('../src/json-expression.js');
+var jsonExp = require('../src/json-expression.js');
 
 describe('Library', function () {
     it('Should have proper interface.', function () {
-        should(jsonx).have.type('function');
-        should(jsonx).ownProperty('join').have.type('function');
-        should(jsonx).ownProperty('defaults').have.type('function');
+        should(jsonExp).have.type('function');
+        should(jsonExp).ownProperty('copy').have.type('function');
+        should(jsonExp).ownProperty('defaults').have.type('function');
     });
 
     describe('Expressions', function () {
         var result;
 
         before(function () {
-            result = jsonx({
+            result = jsonExp({
                 a: 1,
                 b: 2,
                 c: {$: 'a + b'},
@@ -60,7 +60,7 @@ describe('Library', function () {
         var result;
 
         before(function () {
-            result = jsonx({
+            result = jsonExp({
                 required: {$require: 'require.json'}
             }, {
                 root: __dirname
@@ -78,7 +78,7 @@ describe('Library', function () {
         var result;
 
         before(function () {
-            result = jsonx({
+            result = jsonExp({
                 foo: {
                    bar: true
                 },
@@ -86,7 +86,7 @@ describe('Library', function () {
                     $extend: {
                         bak: false
                     },
-                    $with: {$:'foo'}
+                    $with: {$: 'foo'}
                 }
             }, {
                 root: __dirname
@@ -98,6 +98,31 @@ describe('Library', function () {
         it('result.baz should to be an Object {"bar": true, "bak": false}', function () {
             should(result.baz).be.an.Object().and.ownProperty('bar').equal(true);
             should(result.baz).be.an.Object().and.ownProperty('bak').equal(false);
+        });
+    });
+
+    describe('JsonExp copy method', function () {
+        it('Should copy objects', function () {
+            var source = {};
+            Object.defineProperty(source, 'foo', {
+                get: function(){
+                    return "bar";
+                }
+            });
+            var target = jsonExp.copy({}, source);
+
+            should(target).hasOwnProperty('foo').which.equal('bar');
+        });
+
+        it('Should copy arrays', function(){
+            var source = {
+                array: [1,2,3]
+            };
+
+            var target = jsonExp.copy({}, source);
+
+            source.array.push(4);
+            should(target).hasOwnProperty('array').which.is.an.Array().with.length(3);
         });
     });
 });
