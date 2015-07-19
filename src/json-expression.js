@@ -18,7 +18,6 @@ function jsonEx(expression, options) {
         filename: null,
         helpers: ['require', 'extend'],
         scope: null,
-        path: [],
         cache: {},
         root: process.cwd(),
         dir: '/'
@@ -63,7 +62,7 @@ function compile(target, options, path) {
     } else if (target.hasOwnProperty('$')) {
         result = expressions.compile(target.$)(options.scope);
     } else {
-        result = matchRules(target, jsonEx.helpers, options);
+        result = matchRules(target, jsonEx.helpers, options, path);
         if (isUndefined(result)) {
             result = target;
         }
