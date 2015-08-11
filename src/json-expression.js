@@ -18,6 +18,7 @@ function jsonExp(expression, options) {
         id: '',
         helpers: jsonExp.helpers,
         scope: null,
+        interpolation: /\$\{([a-z0-9A-Z][a-z0-9A-Z_]*)}/g,
         cache: {}
     });
 
@@ -86,6 +87,14 @@ function compile(target, options, path) {
                     }
                     result[key] = compile(value, options, path.concat([key]));
                 }
+            } else if (typeof value === 'string' && options.interpolation.test(value)) {
+                Object.defineProperty(result, key, {
+                    get: function() {
+                        return value.replace(options.interpolation, function(match, value){
+                            return options.scope[value];
+                        });
+                    }
+                });
             } else {
                 result[key] = value;
             }

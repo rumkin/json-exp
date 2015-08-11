@@ -13,6 +13,22 @@ npm install json-exp
 
 ## Usage
 
+String interpolation:
+
+```javascript
+var scope = {
+    name: 'World'
+};
+
+var result = jsonExp({
+    hello: "Hello ${name}"
+}, {
+    scope: scope
+});
+
+result.hello; // => String: 'Hello World'
+```
+
 Property evaluation:
 
 ```javascript

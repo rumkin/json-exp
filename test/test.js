@@ -77,6 +77,38 @@ describe('Library', function () {
         });
     });
 
+    describe('Interpolation', function () {
+        it('Should put value into string', function () {
+            var result = jsonExp({
+                test: "Hello ${name}"
+            }, {
+                scope: {
+                    name: 'world'
+                }
+            });
+
+            should(result.test).have.type('string').and.equal('Hello world');
+        });
+
+        it('Should interpolate with getter', function () {
+            var scope = {
+                name: 'world'
+            };
+
+            var result = jsonExp({
+                test: "Hello ${name}"
+            }, {
+                scope: scope
+            });
+
+            should(result.test).have.type('string').and.equal('Hello world');
+
+            scope.name = 'user';
+
+            should(result.test).have.type('string').and.equal('Hello user');
+        });
+    });
+
 
     describe('$require rule.', function(){
         var result;
