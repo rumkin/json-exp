@@ -72,7 +72,7 @@ var result = JsonExp({
     user : {
         name: 'John',
         surname: 'Smith'
-        fullName: '${_.name} ${_.surname}
+        fullName: '${_.name} ${_.surname}'
     }
 });
 
