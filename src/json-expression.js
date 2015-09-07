@@ -18,7 +18,7 @@ function jsonExp(expression, options) {
         id: '',
         helpers: jsonExp.helpers,
         scope: null,
-        interpolation: /\$\{([a-z0-9A-Z][a-z0-9A-Z_]*)}/g,
+        interpolation: /\$\{([a-z0-9A-Z_]+(\.[a-z0-9A-Z]+)*)}/g,
         cache: {}
     });
 
@@ -90,8 +90,21 @@ function compile(target, options, path) {
             } else if (typeof value === 'string' && options.interpolation.test(value)) {
                 Object.defineProperty(result, key, {
                     get: function() {
+                        var scope = Object.create(options.scope);
+                        scope._ = result;
                         return value.replace(options.interpolation, function(match, value){
-                            return options.scope[value];
+                            var path = value.split('.');
+                            var target = scope;
+
+                            while(path.length) {
+                                if (util.isObject(target) && path[0] in target) {
+                                    target = target[path.shift()];
+                                } else {
+                                    return;
+                                }
+                            }
+
+                            return target;
                         });
                     }
                 });
@@ -116,7 +129,9 @@ function bindExpression(target, key, expression, options) {
     Object.defineProperty(target, key, {
         configurable: true,
         get: function() {
-            return expressions.compile(expression)(options.scope);
+            var scope = Object.create(options.scope);
+            scope._ = target;
+            return expressions.compile(expression)(scope);
         }
     });
 }

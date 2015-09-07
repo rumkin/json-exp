@@ -11,25 +11,18 @@ Install using npm:
 npm install json-exp
 ```
 
-## Usage
-
-String interpolation:
+## String interpolation
 
 ```javascript
-var scope = {
-    name: 'World'
-};
-
 var result = jsonExp({
+    name: "World",
     hello: "Hello ${name}"
-}, {
-    scope: scope
 });
 
 result.hello; // => String: 'Hello World'
 ```
 
-Property evaluation:
+## Expression evaluation
 
 ```javascript
 var json = {
@@ -39,13 +32,13 @@ var json = {
 };
 
 var result = jsonExp(json);
-result.c // => Number:3
+result.c // => Number: 3
 
 result.a = 3;
-result.c // => Number:5
+result.c // => Number: 5
 ```
 
-Scopes:
+## Scope
 
 ```javascript
 var scope = {
@@ -59,4 +52,29 @@ var result = jsonExp({
 });
 
 result.hello; // => String: 'Hello World'
+```
+
+## Depth
+
+```javascript
+var result = JsonExp({
+    user : {
+        name: 'John'
+    },
+    userName: '$user.name'
+});
+
+result.userName; // => String: 'John'
+```
+
+```javascript
+var result = JsonExp({
+    user : {
+        name: 'John',
+        surname: 'Smith'
+        fullName: '${_.name} ${_.surname}
+    }
+});
+
+result.user.fullName; // => String: 'John Smith'
 ```

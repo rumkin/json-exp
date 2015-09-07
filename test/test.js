@@ -109,6 +109,38 @@ describe('Library', function () {
         });
     });
 
+    describe('Depth and this', function(){
+        it('Should interpret _ as this with expression', function(){
+            var result = jsonExp({
+                user: {
+                    name: 'John',
+                    surname: 'Smith',
+                    fullName: {$:'_.name + " " + _.surname'}
+                }
+            });
+
+            should(result).have.type('object')
+                .and.have.property('user')
+                .which.have.property('fullName')
+                .which.equal('John Smith');
+        });
+
+        it('Should interpret _ as this with evaluation', function(){
+            var result = jsonExp({
+                user: {
+                    name: 'John',
+                    surname: 'Smith',
+                    fullName: '${_.name} ${_.surname}'
+                }
+            });
+
+            should(result).have.type('object')
+                .and.have.property('user')
+                .which.have.property('fullName')
+                .which.equal('John Smith');
+        });
+    });
+
 
     describe('$require rule.', function(){
         var result;
